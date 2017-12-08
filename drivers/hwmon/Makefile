@@ -137,6 +137,8 @@ obj-$(CONFIG_SENSORS_WM8350)	+= wm8350-hwmon.o
 
 obj-$(CONFIG_PMBUS)		+= pmbus/
 obj-$(CONFIG_DA380)		+= da380/
+obj-$(CONFIG_BMI055ACCE)	+= bmi055acce/
+obj-$(CONFIG_BMI055GYRO)	+= bmi055gyro/
 
 obj-$(CONFIG_SENSORS_INA219)	+= ina219.o
 

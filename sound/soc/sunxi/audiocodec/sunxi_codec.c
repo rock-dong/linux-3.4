@@ -43,8 +43,6 @@
 #if defined CONFIG_ARCH_SUN8IW5 || defined CONFIG_ARCH_SUN8IW9
 static bool RECORD_TEST_EN;
 static u32 sample_resolution = 16;
-struct clk *module_clk;
-struct clk *pll_clk;
 
 static struct sunxi_dma_params sunxi_pcm_pcm_stereo_out = {
 	.name = "audio_play",
@@ -56,16 +54,6 @@ static struct sunxi_dma_params sunxi_pcm_pcm_stereo_in = {
 	.dma_addr = CODEC_BASSADDRESS + SUNXI_DA_RXFIFO,
 };
 
-#ifdef CONFIG_ARCH_SUN8IW5
-static int sunxi_i2s_set_rate(int freq)
-{
-	if (clk_set_rate(pll_clk, freq))
-		pr_err("set pll_clk rate fail\n");
-	if (clk_set_rate(module_clk, freq))
-		pr_err("set module_clk rate fail\n");
-	return 0;
-}
-#endif
 static void sunxi_snd_txctrl(struct snd_pcm_substream *substream, int on)
 {
 	/*clear TX counter */
@@ -193,7 +181,7 @@ static int sunxi_i2s_hw_params(struct snd_pcm_substream *substream,
 	default:
 		break;
 	}
-	codec_wr_control(SUNXI_AIF1_CLK_CTRL, 0x3, AIF1_WORD_SIZ, rs_value);
+	codec_wr_control(SUNXI_AIF1CLK_CTRL, 0x3, AIF1_WORD_SIZ, rs_value);
 #endif
 
 	if (sample_resolution == 24)
@@ -431,8 +419,7 @@ static int sunxi_i2s_set_clkdiv(struct snd_soc_dai *cpu_dai, int div_id,
 	default:
 		break;
 	}
-	codec_wr_control(SUNXI_AIF1_CLK_CTRL, 0x7, AIF1_LRCK_DIV,
-			 bclk_lrck_div);
+	codec_wr_control(SUNXI_AIF1CLK_CTRL, 0x7, AIF1_LRCK_DIV, bclk_lrck_div);
 
 #endif
 	return 0;
@@ -461,13 +448,13 @@ static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 #ifdef CONFIG_ARCH_SUN8IW5
 /**aif1 part**/
 	/*aif1 slave */
-	codec_wr_control(SUNXI_AIF1_CLK_CTRL, 0x1, AIF1_MSTR_MOD, 1);
+	codec_wr_control(SUNXI_AIF1CLK_CTRL, 0x1, AIF1_MSTR_MOD, 1);
 	/*aif1 i2s mode */
-	codec_wr_control(SUNXI_AIF1_CLK_CTRL, 0x3, AIF1_DATA_FMT, 0);
+	codec_wr_control(SUNXI_AIF1CLK_CTRL, 0x3, AIF1_DATA_FMT, 0);
 
 	/* DAI signal inversions */
-	codec_wr_control(SUNXI_AIF1_CLK_CTRL, 0x1, AIF1_BCLK_INV, 0);
-	codec_wr_control(SUNXI_AIF1_CLK_CTRL, 0x1, AIF1_LRCK_INV, 0);
+	codec_wr_control(SUNXI_AIF1CLK_CTRL, 0x1, AIF1_BCLK_INV, 0);
+	codec_wr_control(SUNXI_AIF1CLK_CTRL, 0x1, AIF1_LRCK_INV, 0);
 #endif
 	return 0;
 }
@@ -509,46 +496,14 @@ static int sunxi_i2s_preapre(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-#if defined CONFIG_ARCH_SUN8IW5 || defined CONFIG_ARCH_SUN8IW9
-static int sunxi_i2s_suspend(struct snd_soc_dai *cpu_dai)
-{
-	pr_debug("[internal-i2s] suspend entered. %s\n", __func__);
-	if (module_clk != NULL)
-		clk_disable_unprepare(module_clk);
 
-	if (pll_clk != NULL)
-		clk_disable_unprepare(pll_clk);
 
 	/*global disable */
-	codec_wr_control(SUNXI_DA_CTL, 0x1, GEN, 0x0);
-	pr_debug("[internal-i2s] suspend out. %s\n", __func__);
-	return 0;
-}
 
-static int sunxi_i2s_resume(struct snd_soc_dai *cpu_dai)
-{
-	pr_debug("[internal-i2s] resume entered. %s\n", __func__);
 
-	if (pll_clk != NULL) {
-		if (clk_prepare_enable(pll_clk)) {
-			pr_err("open sunxi_i2s->pllclk failed! line = %d\n",
-			       __LINE__);
-		}
-	}
 
-	if (module_clk != NULL) {
-		if (clk_prepare_enable(module_clk)) {
-			pr_err("open sunxi_i2s->moduleclk failed! line = %d\n",
-			       __LINE__);
-		}
-	}
 
 	/*global enable */
-	codec_wr_control(SUNXI_DA_CTL, 0x1, GEN, 0x1);
-	pr_debug("[internal-i2s] resume out. %s\n", __func__);
-	return 0;
-}
-#endif
 
 static struct snd_soc_dai_ops sunxi_i2s_dai_ops = {
 	.trigger = sunxi_i2s_trigger,
@@ -560,14 +515,7 @@ static struct snd_soc_dai_ops sunxi_i2s_dai_ops = {
 };
 #endif
 
-static struct snd_soc_dai_driver sunxi_pcm_dai[] = {
-	{
-	 .name = "sunxi-codec",
-	 .id = 1,
-#if defined CONFIG_ARCH_SUN8IW5 || defined CONFIG_ARCH_SUN8IW9
-	 .suspend = sunxi_i2s_suspend,
-	 .resume = sunxi_i2s_resume,
-#endif
+static struct snd_soc_dai_driver sunxi_pcm_dai = {
 	 .playback = {
 		      .channels_min = 1,
 		      .channels_max = 2,
@@ -587,66 +535,21 @@ static struct snd_soc_dai_driver sunxi_pcm_dai[] = {
 #if defined CONFIG_ARCH_SUN8IW5 || defined CONFIG_ARCH_SUN8IW9
 	 .ops = &sunxi_i2s_dai_ops,
 #endif
-	 },
-#if defined CONFIG_ARCH_SUN8IW5
-	{
-	 .name = "sunxi-codec-aif2-dai",
-	 .id = 2,
-	 .playback = {
-		      .channels_min = 1,
-		      .channels_max = 2,
-		      .rates = SNDRV_PCM_RATE_8000_48000,
-		      .formats = SNDRV_PCM_FMTBIT_S16_LE,},
-	 .capture = {
-		     .channels_min = 1,
-		     .channels_max = 2,
-		     .rates = SNDRV_PCM_RATE_8000_48000,
-		     .formats = SNDRV_PCM_FMTBIT_S16_LE,},
-	 }
-#endif
 };
 
 static int __devinit sunxi_pcm_dev_probe(struct platform_device *pdev)
 {
 	int err = -1;
-#if defined CONFIG_ARCH_SUN8IW5 || defined CONFIG_ARCH_SUN8IW9
+
 	RECORD_TEST_EN = false;
 	/* pll_clk */
-	pll_clk = clk_get(NULL, "pll2");
-	if ((!pll_clk) || (IS_ERR(pll_clk))) {
-		pr_err("[ audio ] err:try to get pll_clk failed!\n");
-	}
-	if (clk_prepare_enable(pll_clk)) {
-		pr_err("[ audio ] err:enable pll_clk failed; \n");
-	}
 	/* module_clk */
-	module_clk = clk_get(NULL, "adda");
-	if ((!module_clk) || (IS_ERR(module_clk))) {
-		pr_err("[ audio ] err:try to get module_clk failed!\n");
-	}
-	if (clk_set_parent(module_clk, pll_clk)) {
-		pr_err
-		    ("[ audio ] err:try to set parent of module_clk to pll_clk failed!\n");
-	}
-	if (clk_set_rate(module_clk, 24576000)) {
-		pr_err
-		    ("[ audio ] err:set module_clk clock freq 24576000 failed!\n");
-	}
-	if (clk_prepare_enable(module_clk)) {
-		pr_err("[ audio ] err:open module_clk failed; \n");
-	}
-#endif
 
-	err =
-	    snd_soc_register_dais(&pdev->dev, sunxi_pcm_dai,
-				  ARRAY_SIZE(sunxi_pcm_dai));
+	err = snd_soc_register_dai(&pdev->dev, &sunxi_pcm_dai);	
 	if (err) {
 		dev_err(&pdev->dev, "Failed to register DAI\n");
 		return err;
 	}
-#if defined CONFIG_ARCH_SUN8IW5 || defined CONFIG_ARCH_SUN8IW9
-	codec_wr_control(SUNXI_DA_CTL, 0x1, GEN, 0x1);
-#endif
 
 	return 0;
 }
@@ -679,12 +582,10 @@ static int __init sunxi_pcm_init(void)
 {
 	int err = 0;
 
-	err = platform_device_register(&sunxi_pcm_device);
-	if (err < 0)
+	if((err = platform_device_register(&sunxi_pcm_device)) < 0)
 		return err;
 
-	err = platform_driver_register(&sunxi_pcm_driver);
-	if (err < 0)
+	if ((err = platform_driver_register(&sunxi_pcm_driver)) < 0)
 		return err;
 
 	return 0;
@@ -704,6 +605,4 @@ MODULE_AUTHOR("REUUIMLLA");
 MODULE_DESCRIPTION("sunxi PCM SoC Interface");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:sunxi-pcm");
-#if defined CONFIG_ARCH_SUN8IW5 || defined CONFIG_ARCH_SUN8IW9
 module_param_named(RECORD_TEST_EN, RECORD_TEST_EN, bool, S_IRUGO | S_IWUSR);
-#endif

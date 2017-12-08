@@ -206,9 +206,9 @@ static struct device_attribute led_class_attrs[] = {
 			gpio_leds.gpio = val.gpio.gpio;
 			gpio_leds.default_state =
 			    val.gpio.data ? LEDS_GPIO_ON : LEDS_GPIO_OFF;
+			printk("config %s, %d, %d\n", gpio_leds.name, gpio_leds.gpio, gpio_leds.default_state);
 			sprintf(led_active_low, "%s_active_low", led_name[0]);
-			type =
-			    script_get_item("led_para", led_active_low, &val);
+			type =  script_get_item("led_para", led_active_low, &val);
 			if (SCIRPT_ITEM_VALUE_TYPE_INT != type) {
 				printk(KERN_ERR "no %s, %s failed!\n",
 				       led_active_low, __func__);
@@ -240,6 +240,7 @@ err_exit:
 	static int __init leds_init(void)
 {
 		int ret = 0;
+    printk("[led]", __func__);
 		ret = sunxi_leds_fetch_sysconfig_para();
 		if (ret != -1) {
 			ret = led_gpio_cfg();

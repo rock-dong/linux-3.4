@@ -22,7 +22,7 @@ config SND_SUNXI_SOC_SUN8IW9_MACHINE
 	  Say Y or M if you want to add sun8iw9 audiocodec support
 config SND_SUNXI_SOC_PUBLUC_MACHINE
 	tristate "Audiocodec Machine for codec chips"
-	depends on  ARCH_SUN8IW1 || ARCH_SUN8IW3 || ARCH_SUN8IW7 || ARCH_SUN8IW8
+	depends on  ARCH_SUN8IW1 || ARCH_SUN8IW3 || ARCH_SUN8IW5 || ARCH_SUN8IW7 || ARCH_SUN8IW8
 	default n
 	help
 	  Say Y or M if you want to add audiocodec machine support
