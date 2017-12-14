@@ -839,6 +839,8 @@ int usb_register_driver(struct usb_driver *new_driver, struct module *owner,
 {
 	int retval = 0;
 
+        printk("%s reject %s \n", __func__, (char *)new_driver->name);
+	return -ENODEV;
 	if (usb_disabled())
 		return -ENODEV;
 

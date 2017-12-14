@@ -4002,8 +4002,10 @@ static int sunxi_mci_get_devinfo(void)
 			goto fail;
 		}
 		mmcinfo->used = val.val;
-		if (!mmcinfo->used)
+		printk(" %s sdnum %d used %d\n", __func__, i, val.val);
+		if (!mmcinfo->used) {
 			continue;
+		}
 		/* get cdmode information */
 		type = script_get_item(mmc_para, "sdc_detmode", &val);
 		if (type != SCIRPT_ITEM_VALUE_TYPE_INT) {

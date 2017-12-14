@@ -1033,9 +1033,13 @@ static int __init usb_init(void)
 	retval = usbfs_init();
 	if (retval)
 		goto fs_init_failed;
+	printk("skip usb hub init \n");
+/*	
 	retval = usb_hub_init();
 	if (retval)
 		goto hub_init_failed;
+*/	
+	
 	retval = usb_register_device_driver(&usb_generic_driver, THIS_MODULE);
 	if (!retval)
 		goto out;

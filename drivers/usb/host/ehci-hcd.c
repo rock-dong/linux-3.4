@@ -1425,6 +1425,8 @@ static int __init ehci_hcd_init(void)
 {
 	int retval = 0;
 
+        printk("disable ehci \n");
+	return -ENODEV;
 	if (usb_disabled())
 		return -ENODEV;
 

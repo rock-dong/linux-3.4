@@ -1599,6 +1599,8 @@ static struct regulator *create_regulator(struct regulator_dev *rdev,
 			goto attr_err;
 	}
 
+	rdev_warn(rdev, "skip create debugfs directory\n");
+/*
 	regulator->debugfs = debugfs_create_dir(regulator->supply_name,
 						rdev->debugfs);
 	if (!regulator->debugfs) {
@@ -1611,6 +1613,7 @@ static struct regulator *create_regulator(struct regulator_dev *rdev,
 		debugfs_create_u32("max_uV", 0444, regulator->debugfs,
 				   &regulator->max_uV);
 	}
+*/
 
 	mutex_unlock(&rdev->mutex);
 	return regulator;

@@ -2089,7 +2089,8 @@ static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 	mmc_send_if_cond(host, host->ocr_avail);
 
 	/* Order's important: probe SDIO, then SD, then MMC */
-	pr_info("*******************Try sdio*******************\n");
+	pr_info("*******************skip Try sdio / sd*******************\n");
+	/*
 	if (!mmc_attach_sdio(host)){
 		pr_info("*******************sdio init ok*******************\n");
 		return 0;
@@ -2099,6 +2100,7 @@ static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
  		pr_info("*******************sd init ok*******************\n");
 		return 0;
 	}
+	*/
 	pr_info("*******************Try mmc*******************\n");
 	if (!mmc_attach_mmc(host)){
 		pr_info("*******************mmc init ok *******************\n");
