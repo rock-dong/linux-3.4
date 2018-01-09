@@ -67,7 +67,7 @@
 #define SLOPE_X_INDEX               5
 #define SLOPE_Y_INDEX               6
 #define SLOPE_Z_INDEX               7
-#define BMA2X2_MAX_DELAY            200
+#define BMA2X2_MAX_DELAY            1000
 #define BMA2X2_RANGE_SET            3  /* +/- 2G */
 #define BMA2X2_BW_SET               12 /* 125HZ  */
 

@@ -66,7 +66,7 @@
 #define BMG_MAX_RETRY_WAIT_DRDY (100)
 
 #define BMG_DELAY_MIN (1)
-#define BMG_DELAY_DEFAULT (200)
+#define BMG_DELAY_DEFAULT (1000)
 
 #define BMG_VALUE_MAX (32767)
 #define BMG_VALUE_MIN (-32768)
