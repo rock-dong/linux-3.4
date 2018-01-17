@@ -56,11 +56,25 @@
  */
 
 /* debug control */
+
+/*
 #define SERIAL_DBG(fmt, arg...)	\
 			do { \
 				if (sw_uport->port.line != 0) \
-					pr_debug("%s()%d - "fmt, __func__, __LINE__, ##arg); \
+					printk("%s()%d - "fmt, __func__, __LINE__, ##arg); \
 			} while (0)
+*/
+
+//#define SERIAL_DBG(fmt, arg...)	printk("%s()%d - "fmt, __func__, __LINE__, ##arg)
+
+
+#define SERIAL_DBG(port , fmt, arg...) \
+	                do { \
+			      if (port != 0) \
+				  printk(fmt, ##arg); \
+			} while (0)	
+
+
 #define SERIAL_MSG(fmt, arg...)	pr_warn("%s()%d - "fmt, __func__, __LINE__, ##arg)
 
 #ifdef CONFIG_SW_UART_DUMP_DATA
@@ -213,7 +227,7 @@ static void sw_uart_stop_tx(struct uart_port *port)
 
 	if (sw_uport->ier & SW_UART_IER_THRI) {
 		sw_uport->ier &= ~SW_UART_IER_THRI;
-		SERIAL_DBG("stop tx, ier %x\n", sw_uport->ier);
+		//SERIAL_DBG(sw_uport->port.line,"stop tx, ier %x\n", sw_uport->ier);
 		serial_out(port, sw_uport->ier, SW_UART_IER);
 	}
 }
@@ -224,7 +238,7 @@ static void sw_uart_start_tx(struct uart_port *port)
 
 	if (!(sw_uport->ier & SW_UART_IER_THRI)) {
 		sw_uport->ier |= SW_UART_IER_THRI;
-		SERIAL_DBG("start tx, ier %x\n", sw_uport->ier);
+		//SERIAL_DBG(sw_uport->port.line,"start tx, ier %x\n", sw_uport->ier);
 		serial_out(port, sw_uport->ier, SW_UART_IER);
 	}
 }
@@ -292,7 +306,7 @@ static unsigned int sw_uart_modem_status(struct sw_uart_port *sw_uport)
 		wake_up_interruptible(&sw_uport->port.state->port.delta_msr_wait);
 	}
 
-	SERIAL_DBG("modem status: %x\n", status);
+	//SERIAL_DBG("modem status: %x\n", status);
 	return status;
 }
 
@@ -325,7 +339,7 @@ static irqreturn_t sw_uart_irq(int irq, void *dev_id)
 
 	iir = serial_in(port, SW_UART_IIR) & SW_UART_IIR_IID_MASK;
 	lsr = serial_in(port, SW_UART_LSR);
-	SERIAL_DBG("irq: iir %x lsr %x\n", iir, lsr);
+	//SERIAL_DBG("irq: iir %x lsr %x\n", iir, lsr);
 
 	if (iir == SW_UART_IIR_IID_BUSBSY) {
 		/* handle busy */
@@ -499,7 +513,7 @@ static void sw_uart_set_mctrl(struct uart_port *port, unsigned int mctrl)
 		mcr |= SW_UART_MCR_LOOP;
 	sw_uport->mcr &= ~(SW_UART_MCR_RTS|SW_UART_MCR_DTR|SW_UART_MCR_LOOP);
 	sw_uport->mcr |= mcr;
-	SERIAL_DBG("set mcr %x\n", mcr);
+	SERIAL_DBG(sw_uport->port.line,"set mcr %x\n", mcr);
 	serial_out(port, sw_uport->mcr, SW_UART_MCR);
 }
 
@@ -518,7 +532,7 @@ static unsigned int sw_uart_get_mctrl(struct uart_port *port)
 		ret |= TIOCM_DSR;
 	if (msr & SW_UART_MSR_CTS)
 		ret |= TIOCM_CTS;
-	SERIAL_DBG("get msr %x\n", msr);
+	SERIAL_DBG(sw_uport->port.line,"get msr %x\n", msr);
 	return ret;
 }
 
@@ -528,7 +542,7 @@ static void sw_uart_stop_rx(struct uart_port *port)
 
 	if (sw_uport->ier & SW_UART_IER_RLSI) {
 		sw_uport->ier &= ~SW_UART_IER_RLSI;
-		SERIAL_DBG("stop rx, ier %x\n", sw_uport->ier);
+		SERIAL_DBG(sw_uport->port.line,"stop rx, ier %x\n", sw_uport->ier);
 		sw_uport->port.read_status_mask &= ~SW_UART_LSR_DR;
 		serial_out(port, sw_uport->ier, SW_UART_IER);
 	}
@@ -540,7 +554,7 @@ static void sw_uart_enable_ms(struct uart_port *port)
 
 	if (!(sw_uport->ier & SW_UART_IER_MSI)) {
 		sw_uport->ier |= SW_UART_IER_MSI;
-		SERIAL_DBG("en msi, ier %x\n", sw_uport->ier);
+		SERIAL_DBG(sw_uport->port.line,"en msi, ier %x\n", sw_uport->ier);
 		serial_out(port, sw_uport->ier, SW_UART_IER);
 	}
 }
@@ -564,7 +578,8 @@ static int sw_uart_startup(struct uart_port *port)
 	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
 	int ret;
 
-	SERIAL_DBG("start up ...\n");
+	SERIAL_DBG(sw_uport->port.line,"start up ...\n");
+        printk("start up");
 
 	ret = request_irq(port->irq, sw_uart_irq, 0, sw_uport->name, port);
 	if (unlikely(ret)) {
@@ -596,7 +611,7 @@ static void sw_uart_shutdown(struct uart_port *port)
 {
 	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
 
-	SERIAL_DBG("shut down ...\n");
+	SERIAL_DBG(sw_uport->port.line,"shut down ...\n");
 	sw_uport->ier = 0;
 	sw_uport->lcr = 0;
 	sw_uport->mcr = 0;
@@ -608,7 +623,7 @@ static void sw_uart_flush_buffer(struct uart_port *port)
 {
 	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
 
-	SERIAL_DBG("flush buffer...\n");
+	SERIAL_DBG(sw_uport->port.line,"flush buffer...\n");
 	sw_uport->fcr = serial_in(port, SW_UART_FCR);
 	serial_out(port, sw_uport->fcr|SW_UART_FCR_TXFIFO_RST, SW_UART_FCR);
 }
@@ -621,7 +636,7 @@ static void sw_uart_set_termios(struct uart_port *port, struct ktermios *termios
 	unsigned int baud, quot, lcr = 0, dll, dlh;
 	unsigned int lcr_fail = 0;
 
-	SERIAL_DBG("set termios ...\n");
+	SERIAL_DBG(sw_uport->port.line,"set termios ...\n");
 	switch (termios->c_cflag & CSIZE) {
 	case CS5:
 		lcr |= SW_UART_LCR_WLEN5;
@@ -653,7 +668,7 @@ static void sw_uart_set_termios(struct uart_port *port, struct ktermios *termios
 	quot = uart_get_divisor(port, baud);
 	dll = quot & 0xff;
 	dlh = quot >> 8;
-	SERIAL_DBG("set baudrate %d, quot %d\n", baud, quot);
+	SERIAL_DBG(sw_uport->port.line,"set baudrate %d, quot %d\n", baud, quot);
 
 	spin_lock_irqsave(&port->lock, flags);
 	uart_update_timeout(port, termios->c_cflag, baud);
@@ -709,8 +724,12 @@ static void sw_uart_set_termios(struct uart_port *port, struct ktermios *termios
 		sw_uport->ier |= SW_UART_IER_MSI;
 	serial_out(port, sw_uport->ier, SW_UART_IER);
 
-	sw_uport->fcr = SW_UART_FCR_RXTRG_1_2 | SW_UART_FCR_TXTRG_1_2
+//	sw_uport->fcr = SW_UART_FCR_RXTRG_1_2 | SW_UART_FCR_TXTRG_1_2
+//			| SW_UART_FCR_FIFO_EN;
+	sw_uport->fcr = SW_UART_FCR_RXTRG_1_4 | SW_UART_FCR_TXTRG_1_2
 			| SW_UART_FCR_FIFO_EN;
+
+			
 	serial_out(port, sw_uport->fcr, SW_UART_FCR);
 
 	sw_uport->lcr = lcr;
@@ -754,7 +773,7 @@ static void sw_uart_set_termios(struct uart_port *port, struct ktermios *termios
 	/* Don't rewrite B0 */
 	if (tty_termios_baud_rate(termios))
 		tty_termios_encode_baud_rate(termios, baud, baud);
-	SERIAL_DBG("termios lcr 0x%x fcr 0x%x mcr 0x%x dll 0x%x dlh 0x%x\n",
+	SERIAL_DBG(sw_uport->port.line,"termios lcr 0x%x fcr 0x%x mcr 0x%x dll 0x%x dlh 0x%x\n",
 			sw_uport->lcr, sw_uport->fcr, sw_uport->mcr,
 			sw_uport->dll, sw_uport->dlh);
 }
@@ -817,7 +836,7 @@ static void sw_uart_release_port(struct uart_port *port)
 {
 	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
 
-	SERIAL_DBG("release port(iounmap & release io)\n");
+	SERIAL_DBG(sw_uport->port.line,"release port(iounmap & release io)\n");
 	/* release memory resource */
 	release_mem_region(port->mapbase, SUNXI_UART_MEM_RANGE);
 	iounmap(port->membase);
@@ -832,7 +851,8 @@ static int sw_uart_request_port(struct uart_port *port)
 	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
 	int ret;
 
-	SERIAL_DBG("request port(ioremap & request io) %d\n", port->line);
+	SERIAL_DBG(sw_uport->port.line,"request port(ioremap & request io) %d\n", port->line);
+	printk("request port(ioremap & request io) %d\n", port->line);
 	/* request memory resource */
 	if (!request_mem_region(port->mapbase, SUNXI_UART_MEM_RANGE, SUNXI_UART_DEV_NAME)) {
 		SERIAL_MSG("uart%d, request mem region failed\n", sw_uport->id);
@@ -882,7 +902,7 @@ static void sw_uart_pm(struct uart_port *port, unsigned int state,
 	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
 	int ret;
 
-	SERIAL_DBG("PM state %d -> %d\n", oldstate, state);
+	SERIAL_DBG(sw_uport->port.line,"PM state %d -> %d\n", oldstate, state);
 
 	switch (state) {
 	case 0: /* Power up */
@@ -1262,7 +1282,7 @@ static int sw_uart_request_resource(struct sw_uart_port* sw_uport, struct sw_uar
 {
 	struct uart_port *port = &sw_uport->port;
 
-	SERIAL_DBG("get system resource(clk & IO)\n");
+	SERIAL_DBG(sw_uport->port.line,"get system resource(clk & IO)\n");
 
 	if (sw_uart_regulator_request(sw_uport, pdata) < 0) {
 		SERIAL_MSG("uart%d request regulator failed!\n", sw_uport->id);
@@ -1288,7 +1308,7 @@ static int sw_uart_request_resource(struct sw_uart_port* sw_uport, struct sw_uar
 
 static int sw_uart_release_resource(struct sw_uart_port* sw_uport, struct sw_uart_pdata *pdata)
 {
-	SERIAL_DBG("put system resource(clk & IO)\n");
+	SERIAL_DBG(sw_uport->port.line,"put system resource(clk & IO)\n");
 
 	#ifdef CONFIG_SW_UART_DUMP_DATA
 	kfree(sw_uport->dump_buff);
@@ -1333,7 +1353,8 @@ static int __devinit sw_uart_probe(struct platform_device *pdev)
 	snprintf(sw_uport->name, 16, SUNXI_UART_DEV_NAME"%d", pdev->id);
 	pdev->dev.init_name = sw_uport->name;
 
-	SERIAL_DBG("uart.%d probe ... \n", pdev->id);
+	SERIAL_DBG(pdev->id,"uart.%d probe ... \n", pdev->id);
+	printk("uart.%d probe ... \n", pdev->id);
 
 	/* request system resource and init them */
 	ret = sw_uart_request_resource(sw_uport, pdev->dev.platform_data);
@@ -1360,7 +1381,7 @@ static int __devinit sw_uart_probe(struct platform_device *pdev)
 	port->line = sw_uport->pdata->port_no;
 	platform_set_drvdata(pdev, port);
 
-	SERIAL_DBG("add uart%d port, port_type %d, uartclk %d\n",
+	SERIAL_DBG(pdev->id,"add uart%d port, port_type %d, uartclk %d\n",
 			pdev->id, port->type, port->uartclk);
 	return uart_add_one_port(&sw_uart_driver, port);
 }
@@ -1369,7 +1390,7 @@ static int __devexit sw_uart_remove(struct platform_device *pdev)
 {
 	struct sw_uart_port *sw_uport = platform_get_drvdata(pdev);
 
-	SERIAL_DBG("release uart%d port\n", sw_uport->id);
+	SERIAL_DBG(sw_uport->port.line,"release uart%d port\n", sw_uport->id);
 	sw_uart_release_resource(sw_uport, pdev->dev.platform_data);
 	return 0;
 }
@@ -1533,6 +1554,8 @@ static int __init sunxi_uart_init(void)
 	int ret;
 	u32 i;
 	struct sw_uart_pdata *pdata;
+        SERIAL_DBG(1,"sunxi_uart_init rock\n");
+	printk("sunxi_uart_init printk \n");
 
 	sunxi_uart_device_scan();
 	ret = sw_uart_get_devinfo();

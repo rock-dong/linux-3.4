@@ -322,6 +322,10 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
         bit = gic_cpu_map[cpu] << shift;
 
 	val = readl_relaxed(reg) & ~mask;
+	do {
+	    val |= 1 << (cpu + shift);
+            cpu = cpumask_next(cpu, mask_val);	    
+	}while(cpu < nr_cpu_ids);
 	writel_relaxed(val | bit, reg);
 	raw_spin_unlock(&irq_controller_lock);
 
